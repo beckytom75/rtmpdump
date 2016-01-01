@@ -310,8 +310,43 @@ GetLastKeyframe(FILE * file,	// output file [in]
   //if(!bAudioOnly) // we have to handle video/video+audio different since we have non-seekable frames
   //{
   // find the last seekable frame
-  off_t tsize = 0;
-  uint32_t prevTagSize = 0;
+    off_t tsize = 0;
+    uint32_t prevTagSize = 0;
+    uint32_t headerSize = 0;
+    uint32_t payloadSize = 0;
+    off_t offset = 0;
+    off_t oldoffset = 0;
+    off_t lastGoodTag = 0;
+
+  // go through the file and find the last video keyframe
+    fseek(file, 5, SEEK_SET);
+    if (fread(buffer, 1, 4, file) != 4)
+    {
+        RTMP_Log(RTMP_LOGERROR, "Couldn't read headerSize from file!");
+        return RD_FAILED;
+    }
+    headerSize = AMF_DecodeInt32(buffer);
+    offset = headerSize;
+    while (offset < size)
+    {
+        fseeko(file, offset , SEEK_SET);
+        if (fread(buffer, 1, 8, file) != 8)
+        {
+            break;
+        }
+        prevTagSize = AMF_DecodeInt32(buffer);
+
+        //if prevTagSize doesn't match previous payloadSize this packet is fubar
+
+        if ( ( prevTagSize != 0 ) && ( prevTagSize != ( payloadSize + 11 ) ) ) break;
+        payloadSize = AMF_DecodeInt24(buffer+5);
+        lastGoodTag = oldoffset;
+        oldoffset = offset;
+        offset += payloadSize + 15; // the back pointer (4)  the tag header (11) and the payload
+    }
+
+    tsize = size - lastGoodTag - 4; // set tsize to point to offset from end of file of the header of last good tag
+    prevTagSize = AMF_DecodeInt32(buffer);
 
   // go through the file and find the last video keyframe
   do

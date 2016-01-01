@@ -5198,7 +5198,7 @@ HTTP_read(RTMP *r, int fill)
   return 0;
 }
 
-#define MAX_IGNORED_FRAMES	100
+#define MAX_IGNORED_FRAMES	200
 
 /* Read from the stream until we get a media packet.
  * Returns -3 if Play.Close/Stop, -2 if fatal error, -1 if no more media
@@ -5408,7 +5408,7 @@ Read_1_Packet(RTMP *r, char *buf, unsigned int buflen)
                                "timestamp; probably the resume seek failed?");
                     }
                 stopKeyframeSearch:
-                  if (!(r->m_read.flags & RTMP_READ_GOTFLVK))
+                  if (!(r->m_read.flags & (RTMP_READ_GOTKF|RTMP_READ_GOTFLVK)))
                     {
                       RTMP_Log(RTMP_LOGERROR, "Couldn't find the seeked keyframe in this chunk!");
                       ret = RTMP_READ_IGNORE;
